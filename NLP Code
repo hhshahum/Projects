@@ -1,0 +1,2317 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### IMPORTING ALL REQUIRED MODULES AND LIBRARIES"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 307,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import imblearn\n",
+    "import json\n",
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "import re\n",
+    "import random\n",
+    "from collections import defaultdict\n",
+    "import textblob, string\n",
+    "from keras.preprocessing import text, sequence\n",
+    "from keras import layers, models, optimizers\n",
+    "from textblob import TextBlob, Word, Blobber\n",
+    "from nltk.corpus import stopwords\n",
+    "from nltk.tokenize import word_tokenize\n",
+    "from nltk.stem.porter import PorterStemmer\n",
+    "import nltk\n",
+    "from nltk.corpus import stopwords,wordnet\n",
+    "from keras.preprocessing.text import Tokenizer\n",
+    "from sklearn import model_selection, preprocessing, linear_model, naive_bayes, metrics, svm\n",
+    "from sklearn.linear_model import LogisticRegression\n",
+    "from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer, HashingVectorizer\n",
+    "from sklearn import decomposition, ensemble\n",
+    "from nltk import pos_tag\n",
+    "from nltk.stem import WordNetLemmatizer\n",
+    "from sklearn.model_selection import GridSearchCV\n",
+    "from keras.preprocessing.text import Tokenizer\n",
+    "from sklearn.metrics import classification_report\n",
+    "from sklearn.model_selection import learning_curve\n",
+    "from sklearn.svm import SVC\n",
+    "from keras.models import Sequential\n",
+    "from keras import layers\n",
+    "from keras.preprocessing.sequence import pad_sequences"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### LOADING THE DATASETS AND STORING THEM IN DATAFRAMES"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 164,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with open(\"traindata.json\") as f:\n",
+    "    data=json.loads(f.read())\n",
+    "with open(\"allotherdata.json\") as f8:\n",
+    "    data1 = json.loads(f8.read())"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "_id=[]\n",
+    "for field, possible_values in data.items():\n",
+    "    _id.append(field)\n",
+    "    \n",
+    "text=[]\n",
+    "labels=[]\n",
+    "for field,possible_values in data.items():\n",
+    "    for pv1,pv2 in possible_values.items():\n",
+    "        text.append(pv2)\n",
+    "        \n",
+    "for i,val in enumerate(text):\n",
+    "    if(i%2!=0):\n",
+    "        labels.append(val)\n",
+    "\n",
+    "del text[1::2]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "for i in range(len(data1)):\n",
+    "    _id.append(data1[i][0])\n",
+    "    text.append(data1[i][1])\n",
+    "    labels.append(data1[i][2])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "traindatadf = pd.DataFrame(\n",
+    "    {'ID': _id,\n",
+    "     'Text': text,\n",
+    "     'Labels': labels\n",
+    "    },index=None)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0    1899\n",
+       "1    1168\n",
+       "Name: Labels, dtype: int64"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "traindatadf[\"Labels\"].value_counts()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with open(\"testdataunlabelled.json\") as f5:\n",
+    "    data5=json.loads(f5.read())"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with open(\"devdata.json\") as f6:\n",
+    "    data6=json.loads(f6.read())"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "_id1=[]\n",
+    "for field, possible_values in data6.items():\n",
+    "    _id1.append(field)\n",
+    "text1=[]\n",
+    "labels1=[]\n",
+    "for field,possible_values in data6.items():\n",
+    "    for pv1,pv2 in possible_values.items():\n",
+    "        text1.append(pv2)\n",
+    "        \n",
+    "for i,val in enumerate(text1):\n",
+    "    if(i%2!=0):\n",
+    "        labels1.append(val)\n",
+    "\n",
+    "del text1[1::2]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "devdatadf = pd.DataFrame(\n",
+    "    {'ID': _id1,\n",
+    "     'Text': text1,\n",
+    "     'Labels': labels1\n",
+    "    },index=None)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "_id2=[]\n",
+    "for field, possible_values in data5.items():\n",
+    "    _id2.append(field)\n",
+    "text2=[]\n",
+    "for field,possible_values in data5.items():\n",
+    "    for pv1,pv2 in possible_values.items():\n",
+    "        text2.append(pv2)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "testdatadf = pd.DataFrame(\n",
+    "    {'ID': _id2,\n",
+    "     'Text': text2\n",
+    "    },index=None)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### BASIC DATA PREPROCESSING"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#CONVERT ALL THE WORDS TO LOWER CASE\n",
+    "traindatadf['Text'] = [word.lower() for word in traindatadf['Text']]\n",
+    "testdatadf['Text'] = [word.lower() for word in testdatadf['Text']]\n",
+    "devdatadf['Text'] = [word.lower() for word in devdatadf['Text']]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Remove Numbers\n",
+    "traindatadf['Text'] = traindatadf['Text'].apply(lambda x: re.sub(r'\\d+','',x))\n",
+    "testdatadf['Text'] = testdatadf['Text'].apply(lambda x: re.sub(r'\\d+','',x))\n",
+    "devdatadf['Text'] = devdatadf['Text'].apply(lambda x: re.sub(r'\\d+','',x))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Remove all extra and special characters\n",
+    "traindatadf[\"Text\"] = traindatadf['Text'].str.replace('[^\\w\\s]','')\n",
+    "devdatadf[\"Text\"] = devdatadf['Text'].str.replace('[^\\w\\s]','')\n",
+    "testdatadf[\"Text\"] = testdatadf['Text'].str.replace('[^\\w\\s]','')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Strip extra white spaces\n",
+    "traindatadf['Text'] = traindatadf['Text'].apply(lambda x: x.strip())\n",
+    "devdatadf['Text'] = devdatadf['Text'].apply(lambda x: x.strip())\n",
+    "testdatadf['Text'] = testdatadf['Text'].apply(lambda x: x.strip())"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Substituting multiple spaces with single space\n",
+    "traindatadf['Text'] = traindatadf['Text'].apply(lambda x: re.sub(r'\\s+',' ',x))\n",
+    "testdatadf['Text'] = testdatadf['Text'].apply(lambda x: re.sub(r'\\s+',' ',x))\n",
+    "devdatadf['Text'] = devdatadf['Text'].apply(lambda x: re.sub(r'\\s+',' ',x))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Tokenize the words\n",
+    "traindatadf['Text']= [word_tokenize(word) for word in traindatadf['Text']]\n",
+    "devdatadf['Text']= [word_tokenize(word) for word in devdatadf['Text']]\n",
+    "testdatadf['Text']= [word_tokenize(word) for word in testdatadf['Text']]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "stop_words = set(stopwords.words('english'))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Removal of Stopwords\n",
+    "traindatadf['Text'] = traindatadf['Text'].apply(lambda x: [item for item in x if item not in stop_words])\n",
+    "devdatadf['Text'] = devdatadf['Text'].apply(lambda x: [item for item in x if item not in stop_words])\n",
+    "testdatadf['Text'] = testdatadf['Text'].apply(lambda x: [item for item in x if item not in stop_words])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Stemming\n",
+    "porter = PorterStemmer()\n",
+    "traindatadf['Text'] = traindatadf['Text'].apply(lambda x: [porter.stem(y) for y in x])\n",
+    "devdatadf['Text'] = devdatadf['Text'].apply(lambda x: [porter.stem(y) for y in x])\n",
+    "testdatadf['Text'] = testdatadf['Text'].apply(lambda x: [porter.stem(y) for y in x])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Part of speech tagging\n",
+    "def get_pos(word):\n",
+    "    tag = nltk.pos_tag([word])[0][1][0].upper()\n",
+    "    tag_dict = {\"J\": wordnet.ADJ,\n",
+    "                \"N\": wordnet.NOUN,\n",
+    "                \"V\": wordnet.VERB,\n",
+    "                \"R\": wordnet.ADV}\n",
+    "    return tag_dict.get(tag, wordnet.NOUN)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Lemmatization\n",
+    "lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()\n",
+    "traindatadf['Text'] = traindatadf['Text'].apply(lambda x: [lemmatizer.lemmatize(y,get_pos(y)) for y in x])\n",
+    "devdatadf['Text'] = devdatadf['Text'].apply(lambda x: [lemmatizer.lemmatize(y,get_pos(y)) for y in x])\n",
+    "testdatadf['Text'] = testdatadf['Text'].apply(lambda x: [lemmatizer.lemmatize(y,get_pos(y)) for y in x])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Remove all single letter words\n",
+    "traindatadf['Text'] = traindatadf['Text'].apply(lambda x: re.sub(r'\\s+[a-zA-Z]\\s+', ' ',x))\n",
+    "devdatadf['Text'] = devdatadf['Text'].apply(lambda x: re.sub(r'\\s+[a-zA-Z]\\s+', ' ',x))\n",
+    "testdatadf['Text'] = testdatadf['Text'].apply(lambda x: re.sub(r'\\s+[a-zA-Z]\\s+', ' ',x))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Join all the words to make new and processed sentences\n",
+    "traindatadf['Text']=traindatadf['Text'].apply(lambda x: \" \".join(x))\n",
+    "devdatadf['Text']=devdatadf['Text'].apply(lambda x: \" \".join(x))\n",
+    "testdatadf['Text']=testdatadf['Text'].apply(lambda x: \" \".join(x))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Target Variables\n",
+    "y_train = traindatadf[\"Labels\"]\n",
+    "y_dev = devdatadf[\"Labels\"]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Text Data\n",
+    "x_train = traindatadf[\"Text\"]\n",
+    "x_dev = devdatadf[\"Text\"]\n",
+    "x_test = testdatadf[\"Text\"]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### ADVANCED TEXT PROCESSING"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "count_vect = CountVectorizer(analyzer='word', token_pattern=r'\\w{1,}',max_features=5000)\n",
+    "xtrain_count = count_vect.fit_transform(x_train)\n",
+    "xvalid_count = count_vect.transform(x_dev)\n",
+    "xtest_count = count_vect.transform(x_test)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# ngram level tf-idf \n",
+    "tfidf_vect_ngram = TfidfVectorizer(analyzer='word', token_pattern=r'\\w{1,}', ngram_range=(2,3), max_features=5000)\n",
+    "tfidf_vect_ngram.fit(x_train)\n",
+    "tfidf_vect_ngram.fit(x_dev)\n",
+    "tfidf_vect_ngram.fit(x_test)\n",
+    "xtrain_tfidf_ngram =  tfidf_vect_ngram.transform(x_train)\n",
+    "xtdev_tfidf_ngram =  tfidf_vect_ngram.transform(x_dev)\n",
+    "xtest_tfidf_ngram =  tfidf_vect_ngram.transform(x_test)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 159,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# characters level tf-idf\n",
+    "tfidf_vect_ngram_chars = TfidfVectorizer(analyzer='char', ngram_range=(2,3), max_features=5000)\n",
+    "tfidf_vect_ngram_chars.fit(x_train)\n",
+    "tfidf_vect_ngram_chars.fit(x_dev)\n",
+    "tfidf_vect_ngram_chars.fit(x_test)\n",
+    "xtrain_tfidf_ngram_chars =  tfidf_vect_ngram_chars.transform(x_train) \n",
+    "xtdev_tfidf_ngram_chars =  tfidf_vect_ngram_chars.transform(x_dev) \n",
+    "xtest_tfidf_ngram_chars =  tfidf_vect_ngram_chars.transform(x_test) "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#TF-IDF VECTORIZER\n",
+    "tfidf_vect = TfidfVectorizer(max_features=5000)\n",
+    "tfidf_vect.fit(x_train)\n",
+    "tfidf_vect.fit(x_dev)\n",
+    "tfidf_vect.fit(x_test)\n",
+    "xtrain_tfidf =  tfidf_vect.transform(x_train)\n",
+    "xdev_tfidf =  tfidf_vect.transform(x_dev)\n",
+    "xtest_tfidf = tfidf_vect.transform(x_test)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 94,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "vectorizer = HashingVectorizer(norm = None, n_features = 1000)\n",
+    "x_train_hash = vectorizer.fit_transform(x_train)\n",
+    "x_dev_hash = vectorizer.fit_transform(x_dev)\n",
+    "x_test_hash = vectorizer.fit_transform(x_test)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 33,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#LABEL ENCODER\n",
+    "encoder = preprocessing.LabelEncoder()\n",
+    "y_train = encoder.fit_transform(y_train)\n",
+    "y_dev = encoder.fit_transform(y_dev)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### BASIC MACHINE LEARNING MODELS"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 38,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Machine learning model for development data\n",
+    "def train_model(classifier, feature_vector_train, label, feature_vector_valid):\n",
+    "    classifier.fit(feature_vector_train, label)\n",
+    "    predictions = classifier.predict(feature_vector_valid)\n",
+    "    return metrics.accuracy_score(predictions, y_dev)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 39,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Machine learning model for testing data\n",
+    "def train_model_for_test(classifier, feature_train, label, feature_test):\n",
+    "    classifier.fit(feature_train, label)\n",
+    "    predictions = classifier.predict(feature_test)    \n",
+    "    return predictions"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 123,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Random Forest, Count Vectorizers:  0.51\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Random Forest on Count Vectorizers\n",
+    "accuracy1 = train_model(ensemble.RandomForestClassifier(n_estimators=100), xtrain_count, y_train, xvalid_count)\n",
+    "print (\"Random Forest, Count Vectorizers: \", accuracy1)\n",
+    "accuracy2 = train_model_for_test(ensemble.RandomForestClassifier(n_estimators=100),xtrain_count, y_train, xtest_count)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 121,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Random Forest, TF-IDF Vectorizers:  0.53\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Random Forest on TF-IDF Vectorizers\n",
+    "accuracy3 = train_model(ensemble.RandomForestClassifier(n_estimators=100), xtrain_tfidf, y_train, xdev_tfidf)\n",
+    "print (\"Random Forest, TF-IDF Vectorizers: \", accuracy3)\n",
+    "accuracy4 = train_model_for_test(ensemble.RandomForestClassifier(n_estimators=100),xtrain_tfidf, y_train, xtest_tfidf)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 50,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Random Forest, N-gram TF-IDF Vectorizers:  0.67\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Random Forest on N-gram level TF-IDF Vectorizers\n",
+    "accuracy5 = train_model(ensemble.RandomForestClassifier(n_estimators=100), xtrain_tfidf_ngram, y_train, xtdev_tfidf_ngram)\n",
+    "print (\"Random Forest, N-gram TF-IDF Vectorizers: \", accuracy5)\n",
+    "accuracy6 = train_model_for_test(ensemble.RandomForestClassifier(n_estimators=100),xtrain_tfidf_ngram, y_train, xtest_tfidf_ngram)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 160,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Random Forest, N-gram Character Level TF-IDF Vectorizers:  0.49\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Random Forest on Character level N-gram TF-IDF Vectorizers\n",
+    "accuracy7 = train_model(ensemble.RandomForestClassifier(n_estimators=100), xtrain_tfidf_ngram_chars, y_train, xtdev_tfidf_ngram_chars)\n",
+    "print (\"Random Forest, N-gram Character Level TF-IDF Vectorizers: \", accuracy7)\n",
+    "accuracy8 = train_model_for_test(ensemble.RandomForestClassifier(n_estimators=100),xtrain_tfidf_ngram_chars, y_train, xtest_tfidf_ngram_chars)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 65,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Logistic Regression, Count Vectorizers:  0.71\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Logistic Regression on Count Vectorizers\n",
+    "accuracy9 = train_model(linear_model.LogisticRegression(solver='lbfgs'), xtrain_count, y_train, xvalid_count)\n",
+    "print (\"Logistic Regression, Count Vectorizers: \", accuracy9)\n",
+    "accuracy10 = train_model_for_test(linear_model.LogisticRegression(solver='lbfgs'),xtrain_count, y_train, xtest_count)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 67,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Logistic Regression, TF-IDF Vectorizers:  0.84\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Logistic Regression on TF-IDF Vectorizers\n",
+    "accuracy11 = train_model(linear_model.LogisticRegression(solver='lbfgs'), xtrain_tfidf, y_train, xdev_tfidf)\n",
+    "print (\"Logistic Regression, TF-IDF Vectorizers: \", accuracy11)\n",
+    "accuracy12 = train_model_for_test(linear_model.LogisticRegression(solver='lbfgs'),xtrain_tfidf, y_train, xtest_tfidf)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 258,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Logistic Regression, N-gram TF-IDF Vectorizers:  0.85\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Logistic Regression on N-gram level TF-IDF Vectorizers\n",
+    "accuracy13 = train_model(linear_model.LogisticRegression(solver='lbfgs'), xtrain_tfidf_ngram, y_train, xtdev_tfidf_ngram)\n",
+    "print (\"Logistic Regression, N-gram TF-IDF Vectorizers: \", accuracy13)\n",
+    "accuracy14 = train_model_for_test(linear_model.LogisticRegression(solver='lbfgs'),xtrain_tfidf_ngram, y_train, xtest_tfidf_ngram)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 162,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Logistic Regression, N-gram Character Level TF-IDF Vectorizers:  0.6\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Logistic Regression on Character level N-gram TF-IDF Vectorizers\n",
+    "accuracy15 = train_model(linear_model.LogisticRegression(solver='lbfgs'), xtrain_tfidf_ngram_chars, y_train, xtdev_tfidf_ngram_chars)\n",
+    "print (\"Logistic Regression, N-gram Character Level TF-IDF Vectorizers: \", accuracy15)\n",
+    "accuracy16 = train_model_for_test(linear_model.LogisticRegression(solver='lbfgs'),xtrain_tfidf_ngram_chars, y_train, xtest_tfidf_ngram_chars)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 86,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Multinomial Naive Bayes, Count Vectorizers:  0.5\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Multinomial Naive Bayes on Count Vectorizers\n",
+    "accuracy17 = train_model(naive_bayes.MultinomialNB(), xtrain_count, y_train, xvalid_count)\n",
+    "print (\"Multinomial Naive Bayes, Count Vectorizers: \", accuracy17)\n",
+    "accuracy18 = train_model_for_test(naive_bayes.MultinomialNB(),xtrain_count, y_train, xtest_count)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 87,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Multinomial Naive Bayes, TF-IDF Vectorizers:  0.6\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Multinomial Naive Bayes on TF-IDF Vectorizers\n",
+    "accuracy19 = train_model(naive_bayes.MultinomialNB(), xtrain_tfidf, y_train, xdev_tfidf)\n",
+    "print (\"Multinomial Naive Bayes, TF-IDF Vectorizers: \", accuracy19)\n",
+    "accuracy20 = train_model_for_test(naive_bayes.MultinomialNB(),xtrain_tfidf, y_train, xtest_tfidf)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 88,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Multinomial Naive Bayes, N-gram TF-IDF Vectorizers:  0.68\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Multinomial Naive Bayes on N-gram level TF-IDF Vectorizers\n",
+    "accuracy21 = train_model(naive_bayes.MultinomialNB(), xtrain_tfidf_ngram, y_train, xtdev_tfidf_ngram)\n",
+    "print (\"Multinomial Naive Bayes, N-gram TF-IDF Vectorizers: \", accuracy21)\n",
+    "accuracy22 = train_model_for_test(naive_bayes.MultinomialNB(),xtrain_tfidf_ngram, y_train, xtest_tfidf_ngram)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 161,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Multinomial Naive Bayes, N-gram Character Level TF-IDF Vectorizers:  0.57\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Multinomial Naive Bayes on Character level N-gram TF-IDF Vectorizers\n",
+    "accuracy23 = train_model(naive_bayes.MultinomialNB(), xtrain_tfidf_ngram_chars, y_train, xtdev_tfidf_ngram_chars)\n",
+    "print (\"Multinomial Naive Bayes, N-gram Character Level TF-IDF Vectorizers: \", accuracy23)\n",
+    "accuracy24 = train_model_for_test(naive_bayes.MultinomialNB(),xtrain_tfidf_ngram_chars, y_train, xtest_tfidf_ngram_chars)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 268,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Logistic Regression, Hash Vectors:  0.71\n"
+     ]
+    }
+   ],
+   "source": [
+    "#Logistic Regression Using Hash Vectorizers\n",
+    "accuracy25 = train_model(linear_model.LogisticRegression(solver='lbfgs'), x_train_hash, y_train, x_dev_hash)\n",
+    "print (\"Logistic Regression, Hash Vectors: \", accuracy25)\n",
+    "accuracy26 = train_model_for_test(linear_model.LogisticRegression(solver='lbfgs'),x_train_hash, y_train, x_test_hash)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 277,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Random Forest, Hash Vectors:  0.49\n"
+     ]
+    }
+   ],
+   "source": [
+    "#Random Forest Using Hash Vectorizers\n",
+    "accuracy27 = train_model(ensemble.RandomForestClassifier(n_estimators=100), x_train_hash, y_train, x_dev_hash)\n",
+    "print (\"Random Forest, Hash Vectors: \", accuracy27)\n",
+    "accuracy28 = train_model_for_test(ensemble.RandomForestClassifier(n_estimators=100),x_train_hash, y_train, x_test_hash)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 286,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "------------MULTINOMIAL NAIVE BAYESIAN ON DEVELOPMENT SET (N-GRAM)------------\n",
+      "Accuracy: 0.52 Where Alpha = 0.01\n",
+      "Accuracy: 0.56 Where Alpha = 0.05\n",
+      "Accuracy: 0.57 Where Alpha = 0.09\n",
+      "Accuracy: 0.57 Where Alpha = 0.13\n",
+      "Accuracy: 0.58 Where Alpha = 0.17\n",
+      "Accuracy: 0.59 Where Alpha = 0.21000000000000002\n",
+      "Accuracy: 0.6 Where Alpha = 0.25\n",
+      "Accuracy: 0.6 Where Alpha = 0.29000000000000004\n",
+      "Accuracy: 0.6 Where Alpha = 0.33\n",
+      "Accuracy: 0.62 Where Alpha = 0.37\n",
+      "Accuracy: 0.64 Where Alpha = 0.41000000000000003\n",
+      "Accuracy: 0.64 Where Alpha = 0.45\n",
+      "Accuracy: 0.64 Where Alpha = 0.49\n",
+      "Accuracy: 0.64 Where Alpha = 0.53\n",
+      "Accuracy: 0.64 Where Alpha = 0.5700000000000001\n",
+      "Accuracy: 0.64 Where Alpha = 0.61\n",
+      "Accuracy: 0.65 Where Alpha = 0.65\n",
+      "Accuracy: 0.66 Where Alpha = 0.6900000000000001\n",
+      "Accuracy: 0.66 Where Alpha = 0.73\n",
+      "Accuracy: 0.66 Where Alpha = 0.77\n",
+      "Accuracy: 0.66 Where Alpha = 0.81\n",
+      "Accuracy: 0.66 Where Alpha = 0.85\n",
+      "Accuracy: 0.67 Where Alpha = 0.89\n",
+      "Accuracy: 0.67 Where Alpha = 0.93\n",
+      "Accuracy: 0.67 Where Alpha = 0.97\n",
+      "Accuracy: 0.68 Where Alpha = 1.01\n",
+      "Accuracy: 0.68 Where Alpha = 1.05\n",
+      "Accuracy: 0.68 Where Alpha = 1.09\n",
+      "Accuracy: 0.68 Where Alpha = 1.1300000000000001\n",
+      "Accuracy: 0.68 Where Alpha = 1.17\n",
+      "Accuracy: 0.68 Where Alpha = 1.21\n",
+      "Accuracy: 0.69 Where Alpha = 1.25\n",
+      "Accuracy: 0.7 Where Alpha = 1.29\n",
+      "Accuracy: 0.71 Where Alpha = 1.33\n",
+      "Accuracy: 0.71 Where Alpha = 1.37\n",
+      "Accuracy: 0.71 Where Alpha = 1.4100000000000001\n",
+      "Accuracy: 0.71 Where Alpha = 1.45\n",
+      "Accuracy: 0.72 Where Alpha = 1.49\n",
+      "Accuracy: 0.72 Where Alpha = 1.53\n",
+      "Accuracy: 0.73 Where Alpha = 1.57\n",
+      "Accuracy: 0.73 Where Alpha = 1.61\n",
+      "Accuracy: 0.74 Where Alpha = 1.6500000000000001\n",
+      "Accuracy: 0.74 Where Alpha = 1.69\n",
+      "Accuracy: 0.73 Where Alpha = 1.73\n",
+      "Accuracy: 0.74 Where Alpha = 1.77\n",
+      "Accuracy: 0.73 Where Alpha = 1.81\n",
+      "Accuracy: 0.73 Where Alpha = 1.85\n",
+      "Accuracy: 0.74 Where Alpha = 1.8900000000000001\n",
+      "Accuracy: 0.74 Where Alpha = 1.93\n",
+      "Accuracy: 0.74 Where Alpha = 1.97\n",
+      "Accuracy: 0.74 Where Alpha = 2.01\n",
+      "Accuracy: 0.76 Where Alpha = 2.05\n",
+      "Accuracy: 0.76 Where Alpha = 2.09\n",
+      "Accuracy: 0.76 Where Alpha = 2.13\n",
+      "Accuracy: 0.76 Where Alpha = 2.17\n",
+      "Accuracy: 0.76 Where Alpha = 2.21\n",
+      "Accuracy: 0.76 Where Alpha = 2.25\n",
+      "Accuracy: 0.75 Where Alpha = 2.29\n",
+      "Accuracy: 0.75 Where Alpha = 2.3299999999999996\n",
+      "Accuracy: 0.75 Where Alpha = 2.3699999999999997\n",
+      "Accuracy: 0.76 Where Alpha = 2.4099999999999997\n",
+      "Accuracy: 0.76 Where Alpha = 2.4499999999999997\n",
+      "Accuracy: 0.76 Where Alpha = 2.4899999999999998\n",
+      "Accuracy: 0.76 Where Alpha = 2.53\n",
+      "Accuracy: 0.76 Where Alpha = 2.57\n",
+      "Accuracy: 0.76 Where Alpha = 2.61\n",
+      "Accuracy: 0.75 Where Alpha = 2.65\n",
+      "Accuracy: 0.75 Where Alpha = 2.69\n",
+      "Accuracy: 0.75 Where Alpha = 2.73\n",
+      "Accuracy: 0.75 Where Alpha = 2.77\n",
+      "Accuracy: 0.76 Where Alpha = 2.81\n",
+      "Accuracy: 0.76 Where Alpha = 2.8499999999999996\n",
+      "Accuracy: 0.76 Where Alpha = 2.8899999999999997\n",
+      "Accuracy: 0.76 Where Alpha = 2.9299999999999997\n",
+      "Accuracy: 0.77 Where Alpha = 2.9699999999999998\n",
+      "Accuracy: 0.77 Where Alpha = 3.01\n",
+      "Accuracy: 0.77 Where Alpha = 3.05\n",
+      "Accuracy: 0.77 Where Alpha = 3.09\n",
+      "Accuracy: 0.76 Where Alpha = 3.13\n",
+      "Accuracy: 0.76 Where Alpha = 3.17\n",
+      "Accuracy: 0.76 Where Alpha = 3.21\n",
+      "Accuracy: 0.76 Where Alpha = 3.25\n",
+      "Accuracy: 0.76 Where Alpha = 3.29\n",
+      "Accuracy: 0.75 Where Alpha = 3.33\n",
+      "Accuracy: 0.75 Where Alpha = 3.3699999999999997\n",
+      "Accuracy: 0.75 Where Alpha = 3.4099999999999997\n",
+      "Accuracy: 0.76 Where Alpha = 3.4499999999999997\n",
+      "Accuracy: 0.76 Where Alpha = 3.4899999999999998\n",
+      "Accuracy: 0.76 Where Alpha = 3.53\n",
+      "Accuracy: 0.76 Where Alpha = 3.57\n",
+      "Accuracy: 0.76 Where Alpha = 3.61\n",
+      "Accuracy: 0.76 Where Alpha = 3.65\n",
+      "Accuracy: 0.76 Where Alpha = 3.69\n",
+      "Accuracy: 0.76 Where Alpha = 3.73\n",
+      "Accuracy: 0.76 Where Alpha = 3.77\n",
+      "Accuracy: 0.76 Where Alpha = 3.81\n",
+      "Accuracy: 0.76 Where Alpha = 3.8499999999999996\n",
+      "Accuracy: 0.77 Where Alpha = 3.8899999999999997\n",
+      "Accuracy: 0.77 Where Alpha = 3.9299999999999997\n",
+      "Accuracy: 0.77 Where Alpha = 3.9699999999999998\n",
+      "Accuracy: 0.78 Where Alpha = 4.01\n",
+      "Accuracy: 0.78 Where Alpha = 4.05\n",
+      "Accuracy: 0.78 Where Alpha = 4.09\n",
+      "Accuracy: 0.78 Where Alpha = 4.13\n",
+      "Accuracy: 0.78 Where Alpha = 4.17\n",
+      "Accuracy: 0.78 Where Alpha = 4.21\n",
+      "Accuracy: 0.78 Where Alpha = 4.25\n",
+      "Accuracy: 0.78 Where Alpha = 4.29\n",
+      "Accuracy: 0.78 Where Alpha = 4.33\n",
+      "Accuracy: 0.78 Where Alpha = 4.37\n",
+      "Accuracy: 0.78 Where Alpha = 4.41\n",
+      "Accuracy: 0.78 Where Alpha = 4.45\n",
+      "Accuracy: 0.78 Where Alpha = 4.49\n",
+      "Accuracy: 0.77 Where Alpha = 4.53\n",
+      "Accuracy: 0.77 Where Alpha = 4.57\n",
+      "Accuracy: 0.77 Where Alpha = 4.61\n",
+      "Accuracy: 0.78 Where Alpha = 4.6499999999999995\n",
+      "Accuracy: 0.78 Where Alpha = 4.6899999999999995\n",
+      "Accuracy: 0.78 Where Alpha = 4.7299999999999995\n",
+      "Accuracy: 0.78 Where Alpha = 4.77\n",
+      "Accuracy: 0.78 Where Alpha = 4.81\n",
+      "Accuracy: 0.78 Where Alpha = 4.85\n",
+      "Accuracy: 0.78 Where Alpha = 4.89\n",
+      "Accuracy: 0.78 Where Alpha = 4.93\n",
+      "Accuracy: 0.78 Where Alpha = 4.97\n",
+      "Accuracy: 0.78 Where Alpha = 5.01\n",
+      "Accuracy: 0.78 Where Alpha = 5.05\n",
+      "Accuracy: 0.78 Where Alpha = 5.09\n",
+      "Accuracy: 0.78 Where Alpha = 5.13\n",
+      "Accuracy: 0.78 Where Alpha = 5.17\n",
+      "Accuracy: 0.78 Where Alpha = 5.21\n",
+      "Accuracy: 0.78 Where Alpha = 5.25\n",
+      "Accuracy: 0.78 Where Alpha = 5.29\n",
+      "Accuracy: 0.78 Where Alpha = 5.33\n",
+      "Accuracy: 0.78 Where Alpha = 5.37\n",
+      "Accuracy: 0.79 Where Alpha = 5.41\n",
+      "Accuracy: 0.79 Where Alpha = 5.45\n",
+      "Accuracy: 0.79 Where Alpha = 5.49\n",
+      "Accuracy: 0.79 Where Alpha = 5.53\n",
+      "Accuracy: 0.79 Where Alpha = 5.57\n",
+      "Accuracy: 0.79 Where Alpha = 5.61\n",
+      "Accuracy: 0.78 Where Alpha = 5.6499999999999995\n",
+      "Accuracy: 0.78 Where Alpha = 5.6899999999999995\n",
+      "Accuracy: 0.77 Where Alpha = 5.7299999999999995\n",
+      "Accuracy: 0.77 Where Alpha = 5.77\n",
+      "Accuracy: 0.77 Where Alpha = 5.81\n",
+      "Accuracy: 0.77 Where Alpha = 5.85\n",
+      "Accuracy: 0.76 Where Alpha = 5.89\n",
+      "Accuracy: 0.76 Where Alpha = 5.93\n",
+      "Accuracy: 0.76 Where Alpha = 5.97\n",
+      "Accuracy: 0.76 Where Alpha = 6.01\n",
+      "Accuracy: 0.76 Where Alpha = 6.05\n",
+      "Accuracy: 0.75 Where Alpha = 6.09\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"------------MULTINOMIAL NAIVE BAYESIAN ON DEVELOPMENT SET (N-GRAM)------------\")\n",
+    "maxacc=0\n",
+    "maxi=0\n",
+    "for i in np.arange(0.01,6.1,0.04):\n",
+    "    accuracy29 = train_model(naive_bayes.MultinomialNB(alpha=i), xtrain_tfidf_ngram, y_train, xtdev_tfidf_ngram)\n",
+    "    print(\"Accuracy:\",accuracy29,end=' ')\n",
+    "    print(\"Where Alpha = \"+str(i))\n",
+    "    if(accuracy29>maxacc):\n",
+    "        maxacc = accuracy29\n",
+    "        maxi = i"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 287,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "------------MULTINOMIAL NAIVE BAYESIAN ON TEST SET (N_GRAM)------------\n",
+      "Testing at the optimal value of Alpha:  5.41\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"------------MULTINOMIAL NAIVE BAYESIAN ON TEST SET (N_GRAM)------------\")\n",
+    "accuracy30 = train_model_for_test(naive_bayes.MultinomialNB(alpha=maxi), xtrain_tfidf_ngram, y_train, xtest_tfidf_ngram)\n",
+    "print(\"Testing at the optimal value of Alpha: \",maxi)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 265,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "------------LOGISTIC REGRESSION ON DEVELOPMENT SET (N-GRAM)------------\n",
+      "Accuracy: 0.85 Where C = 1.0\n",
+      "Accuracy: 0.85 Where C = 1.1\n",
+      "Accuracy: 0.85 Where C = 1.2000000000000002\n",
+      "Accuracy: 0.84 Where C = 1.3000000000000003\n",
+      "Accuracy: 0.84 Where C = 1.4000000000000004\n",
+      "Accuracy: 0.84 Where C = 1.5000000000000004\n",
+      "Accuracy: 0.84 Where C = 1.6000000000000005\n",
+      "Accuracy: 0.84 Where C = 1.7000000000000006\n",
+      "Accuracy: 0.83 Where C = 1.8000000000000007\n",
+      "Accuracy: 0.83 Where C = 1.9000000000000008\n",
+      "Accuracy: 0.83 Where C = 2.000000000000001\n",
+      "Accuracy: 0.83 Where C = 2.100000000000001\n",
+      "Accuracy: 0.83 Where C = 2.200000000000001\n",
+      "Accuracy: 0.83 Where C = 2.300000000000001\n",
+      "Accuracy: 0.83 Where C = 2.4000000000000012\n",
+      "Accuracy: 0.83 Where C = 2.5000000000000013\n",
+      "Accuracy: 0.83 Where C = 2.6000000000000014\n",
+      "Accuracy: 0.83 Where C = 2.7000000000000015\n",
+      "Accuracy: 0.83 Where C = 2.8000000000000016\n",
+      "Accuracy: 0.83 Where C = 2.9000000000000017\n",
+      "Accuracy: 0.82 Where C = 3.0000000000000018\n",
+      "Accuracy: 0.82 Where C = 3.100000000000002\n",
+      "Accuracy: 0.82 Where C = 3.200000000000002\n",
+      "Accuracy: 0.82 Where C = 3.300000000000002\n",
+      "Accuracy: 0.82 Where C = 3.400000000000002\n",
+      "Accuracy: 0.82 Where C = 3.500000000000002\n",
+      "Accuracy: 0.82 Where C = 3.6000000000000023\n",
+      "Accuracy: 0.82 Where C = 3.7000000000000024\n",
+      "Accuracy: 0.82 Where C = 3.8000000000000025\n",
+      "Accuracy: 0.82 Where C = 3.9000000000000026\n",
+      "Accuracy: 0.82 Where C = 4.000000000000003\n",
+      "Accuracy: 0.82 Where C = 4.100000000000003\n",
+      "Accuracy: 0.82 Where C = 4.200000000000003\n",
+      "Accuracy: 0.81 Where C = 4.3000000000000025\n",
+      "Accuracy: 0.81 Where C = 4.400000000000003\n",
+      "Accuracy: 0.81 Where C = 4.5000000000000036\n",
+      "Accuracy: 0.81 Where C = 4.600000000000003\n",
+      "Accuracy: 0.81 Where C = 4.700000000000003\n",
+      "Accuracy: 0.81 Where C = 4.800000000000003\n",
+      "Accuracy: 0.81 Where C = 4.900000000000004\n",
+      "Accuracy: 0.81 Where C = 5.0000000000000036\n",
+      "Accuracy: 0.81 Where C = 5.100000000000003\n",
+      "Accuracy: 0.81 Where C = 5.200000000000004\n",
+      "Accuracy: 0.8 Where C = 5.300000000000004\n",
+      "Accuracy: 0.8 Where C = 5.400000000000004\n",
+      "Accuracy: 0.8 Where C = 5.5000000000000036\n",
+      "Accuracy: 0.8 Where C = 5.600000000000004\n",
+      "Accuracy: 0.8 Where C = 5.700000000000005\n",
+      "Accuracy: 0.8 Where C = 5.800000000000004\n",
+      "Accuracy: 0.8 Where C = 5.900000000000004\n",
+      "Accuracy: 0.8 Where C = 6.000000000000004\n",
+      "Accuracy: 0.8 Where C = 6.100000000000005\n",
+      "Accuracy: 0.8 Where C = 6.200000000000005\n",
+      "Accuracy: 0.8 Where C = 6.300000000000004\n",
+      "Accuracy: 0.8 Where C = 6.400000000000005\n",
+      "Accuracy: 0.8 Where C = 6.500000000000005\n",
+      "Accuracy: 0.8 Where C = 6.600000000000005\n",
+      "Accuracy: 0.79 Where C = 6.700000000000005\n",
+      "Accuracy: 0.79 Where C = 6.800000000000005\n",
+      "Accuracy: 0.79 Where C = 6.900000000000006\n",
+      "Accuracy: 0.79 Where C = 7.000000000000005\n",
+      "Accuracy: 0.79 Where C = 7.100000000000005\n",
+      "Accuracy: 0.79 Where C = 7.2000000000000055\n",
+      "Accuracy: 0.79 Where C = 7.300000000000006\n",
+      "Accuracy: 0.79 Where C = 7.400000000000006\n",
+      "Accuracy: 0.79 Where C = 7.500000000000005\n",
+      "Accuracy: 0.79 Where C = 7.600000000000006\n",
+      "Accuracy: 0.79 Where C = 7.700000000000006\n",
+      "Accuracy: 0.79 Where C = 7.800000000000006\n",
+      "Accuracy: 0.79 Where C = 7.900000000000006\n",
+      "Accuracy: 0.79 Where C = 8.000000000000007\n",
+      "Accuracy: 0.79 Where C = 8.100000000000007\n",
+      "Accuracy: 0.79 Where C = 8.200000000000006\n",
+      "Accuracy: 0.79 Where C = 8.300000000000006\n",
+      "Accuracy: 0.79 Where C = 8.400000000000006\n",
+      "Accuracy: 0.79 Where C = 8.500000000000007\n",
+      "Accuracy: 0.79 Where C = 8.600000000000007\n",
+      "Accuracy: 0.79 Where C = 8.700000000000006\n",
+      "Accuracy: 0.79 Where C = 8.800000000000008\n",
+      "Accuracy: 0.78 Where C = 8.900000000000007\n",
+      "Accuracy: 0.78 Where C = 9.000000000000007\n",
+      "Accuracy: 0.78 Where C = 9.100000000000007\n",
+      "Accuracy: 0.78 Where C = 9.200000000000006\n",
+      "Accuracy: 0.78 Where C = 9.300000000000008\n",
+      "Accuracy: 0.78 Where C = 9.400000000000007\n",
+      "Accuracy: 0.78 Where C = 9.500000000000007\n",
+      "Accuracy: 0.78 Where C = 9.600000000000009\n",
+      "Accuracy: 0.78 Where C = 9.700000000000008\n",
+      "Accuracy: 0.78 Where C = 9.800000000000008\n",
+      "Accuracy: 0.78 Where C = 9.900000000000007\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"------------LOGISTIC REGRESSION ON DEVELOPMENT SET (N-GRAM)------------\")\n",
+    "maxacc=0\n",
+    "maxii=0\n",
+    "for i in np.arange(1,10,0.10):\n",
+    "    accuracy31 = train_model(LogisticRegression(C=i,solver='lbfgs',max_iter = 100000), xtrain_tfidf_ngram, y_train, xtdev_tfidf_ngram)\n",
+    "    print(\"Accuracy:\",accuracy31,end=' ')\n",
+    "    print(\"Where C = \"+str(i))\n",
+    "    if(accuracy31>maxacc):\n",
+    "        maxacc = accuracy31\n",
+    "        maxii = i"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 266,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "------------LOGISTIC REGRESSION ON TEST SET (N-GRAM) ------------\n",
+      "Testing at the optimal value of C:  1.0\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"------------LOGISTIC REGRESSION ON TEST SET (N-GRAM) ------------\")\n",
+    "accuracy32 = train_model_for_test(LogisticRegression(C=maxii,solver='lbfgs',max_iter = 100000), xtrain_tfidf_ngram, y_train, xtest_tfidf_ngram)\n",
+    "print(\"Testing at the optimal value of C: \",maxii)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 267,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "------------RANDOM FOREST ON DEVELOPMENT SET (N-GRAM)------------\n",
+      "Accuracy: 0.62 Where C = 1\n",
+      "Accuracy: 0.67 Where C = 101\n",
+      "Accuracy: 0.68 Where C = 201\n",
+      "Accuracy: 0.68 Where C = 301\n",
+      "Accuracy: 0.66 Where C = 401\n",
+      "Accuracy: 0.66 Where C = 501\n",
+      "Accuracy: 0.67 Where C = 601\n",
+      "Accuracy: 0.68 Where C = 701\n",
+      "Accuracy: 0.67 Where C = 801\n",
+      "Accuracy: 0.69 Where C = 901\n",
+      "Accuracy: 0.68 Where C = 1001\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"------------RANDOM FOREST ON DEVELOPMENT SET (N-GRAM)------------\")\n",
+    "maxacc=0\n",
+    "maxiii=0\n",
+    "for i in np.arange(1,1002,100):\n",
+    "    accuracy33 = train_model(ensemble.RandomForestClassifier(n_estimators=i), xtrain_tfidf_ngram, y_train, xtdev_tfidf_ngram)\n",
+    "    print(\"Accuracy:\",accuracy33,end=' ')\n",
+    "    print(\"Where C = \"+str(i))\n",
+    "    if(accuracy33>maxacc):\n",
+    "        maxacc = accuracy33\n",
+    "        maxiii = i"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 308,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "------------RANDOM FOREST ON TEST SET (N-GRAM) ------------\n",
+      "Testing at the optimal value of Number of Estimators:  901\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"------------RANDOM FOREST ON TEST SET (N-GRAM) ------------\")\n",
+    "accuracy34 = train_model_for_test(ensemble.RandomForestClassifier(n_estimators=maxiii), xtrain_tfidf_ngram, y_train, xtest_tfidf_ngram)\n",
+    "print(\"Testing at the optimal value of Number of Estimators: \",maxiii)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### METRICS FOR BASIC MACHINE LEARNING MODELS"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 171,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "------------METRICS FOR RANDOM FOREST USING TF-IDF NGRAM VECTORIZERS------------\n",
+      "\n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.95      0.40      0.56        50\n",
+      "           1       0.62      0.98      0.76        50\n",
+      "\n",
+      "    accuracy                           0.69       100\n",
+      "   macro avg       0.79      0.69      0.66       100\n",
+      "weighted avg       0.79      0.69      0.66       100\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "#Metrics for Development Set (Random Forest on TF-IDF N-GRAM Vectorizers)\n",
+    "met1 = train_model_for_test(ensemble.RandomForestClassifier(n_estimators=maxiii),xtrain_tfidf_ngram, y_train, xtdev_tfidf_ngram)\n",
+    "print(\"------------METRICS FOR RANDOM FOREST USING TF-IDF NGRAM VECTORIZERS------------\\n\")\n",
+    "print(classification_report(y_dev,met1))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 231,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "True\tPredicted\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "Out of 100, total values predicted incorrectly by Random Forest are 31\n"
+     ]
+    }
+   ],
+   "source": [
+    "count=0\n",
+    "print(\"True\\tPredicted\")\n",
+    "for i in range(len(y_dev)):\n",
+    "    if(y_dev[i] == met1[i]):\n",
+    "        continue\n",
+    "    else:\n",
+    "        count+=1\n",
+    "        print(\"  \"+str(y_dev[i])+\"\\t   \"+str(met1[i]))\n",
+    "print(\"Out of {}, total values predicted incorrectly by Random Forest are {}\".format(len(y_dev),count))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 174,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "------------METRICS FOR LOGISTIC REGRESSION USING TF-IDF NGRAM VECTORIZERS------------\n",
+      "\n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.93      0.76      0.84        50\n",
+      "           1       0.80      0.94      0.86        50\n",
+      "\n",
+      "    accuracy                           0.85       100\n",
+      "   macro avg       0.86      0.85      0.85       100\n",
+      "weighted avg       0.86      0.85      0.85       100\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "#Metrics for Development Set (Logistic Regression on TF-IDF N-GRAM Vectorizers)\n",
+    "met2 = train_model_for_test(LogisticRegression(C=maxii,solver='lbfgs',max_iter = 100000),xtrain_tfidf_ngram, y_train, xtdev_tfidf_ngram)\n",
+    "print(\"------------METRICS FOR LOGISTIC REGRESSION USING TF-IDF NGRAM VECTORIZERS------------\\n\")\n",
+    "print(classification_report(y_dev,met2))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 232,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "True\tPredicted\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "Out of 100, total values predicted incorrectly by Logistic Regression are 15\n"
+     ]
+    }
+   ],
+   "source": [
+    "count=0\n",
+    "print(\"True\\tPredicted\")\n",
+    "for i in range(len(y_dev)):\n",
+    "    if(y_dev[i] == met2[i]):\n",
+    "        continue\n",
+    "    else:\n",
+    "        count+=1\n",
+    "        print(\"  \"+str(y_dev[i])+\"\\t   \"+str(met2[i]))\n",
+    "print(\"Out of {}, total values predicted incorrectly by Logistic Regression are {}\".format(len(y_dev),count))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 175,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "------------METRICS FOR MULTINOMIAL NAIVE BAYESIAN USING TF-IDF NGRAM VECTORIZERS------------\n",
+      "\n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.80      0.78      0.79        50\n",
+      "           1       0.78      0.80      0.79        50\n",
+      "\n",
+      "    accuracy                           0.79       100\n",
+      "   macro avg       0.79      0.79      0.79       100\n",
+      "weighted avg       0.79      0.79      0.79       100\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "#Metrics for Development Set (Multinomial Naive Bayesian on TF-IDF N-GRAM Vectorizers)\n",
+    "met3 = train_model_for_test(naive_bayes.MultinomialNB(alpha=maxi),xtrain_tfidf_ngram, y_train, xtdev_tfidf_ngram)\n",
+    "print(\"------------METRICS FOR MULTINOMIAL NAIVE BAYESIAN USING TF-IDF NGRAM VECTORIZERS------------\\n\")\n",
+    "print(classification_report(y_dev,met3))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 233,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "True\tPredicted\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  1\t   0\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "Out of 100, total values predicted incorrectly by Multinomial Naive Bayes are 21\n"
+     ]
+    }
+   ],
+   "source": [
+    "count=0\n",
+    "print(\"True\\tPredicted\")\n",
+    "for i in range(len(y_dev)):\n",
+    "    if(y_dev[i] == met3[i]):\n",
+    "        continue\n",
+    "    else:\n",
+    "        count+=1\n",
+    "        print(\"  \"+str(y_dev[i])+\"\\t   \"+str(met3[i]))\n",
+    "print(\"Out of {}, total values predicted incorrectly by Multinomial Naive Bayes are {}\".format(len(y_dev),count))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### DEEP LEARNING MODELS"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "##### Feed Forward Network (Bag of words)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 143,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "tokenizer = Tokenizer(oov_token=\"<UNK>\")\n",
+    "tokenizer.fit_on_texts(x_train)\n",
+    "x_train1 = tokenizer.texts_to_matrix(x_train, mode=\"count\")\n",
+    "x_dev1 = tokenizer.texts_to_matrix(x_dev, mode=\"count\")\n",
+    "x_test1 = tokenizer.texts_to_matrix(x_test, mode=\"count\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 144,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Vocab size = 18573\n",
+      "[0. 0. 3. ... 0. 0. 0.]\n"
+     ]
+    }
+   ],
+   "source": [
+    "vocab_size = x_train1.shape[1]\n",
+    "print(\"Vocab size =\", vocab_size)\n",
+    "print(x_train1[0])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 299,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Model: \"feedforward-bow-input\"\n",
+      "_________________________________________________________________\n",
+      "Layer (type)                 Output Shape              Param #   \n",
+      "=================================================================\n",
+      "dense_46 (Dense)             (None, 10)                185740    \n",
+      "_________________________________________________________________\n",
+      "dense_47 (Dense)             (None, 10)                110       \n",
+      "_________________________________________________________________\n",
+      "dense_48 (Dense)             (None, 10)                110       \n",
+      "_________________________________________________________________\n",
+      "dense_49 (Dense)             (None, 1)                 11        \n",
+      "=================================================================\n",
+      "Total params: 185,971\n",
+      "Trainable params: 185,971\n",
+      "Non-trainable params: 0\n",
+      "_________________________________________________________________\n"
+     ]
+    }
+   ],
+   "source": [
+    "model = Sequential(name=\"feedforward-bow-input\")\n",
+    "model.add(layers.Dense(10, input_dim=vocab_size, activation='sigmoid'))\n",
+    "model.add(layers.Dense(10,activation='relu'))\n",
+    "model.add(layers.Dense(10,activation='relu'))\n",
+    "model.add(layers.Dense(1,activation='sigmoid'))\n",
+    "model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])\n",
+    "model.summary()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 300,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Epoch 1/30\n",
+      "3067/3067 [==============================] - 1s 332us/step - loss: 0.3226 - accuracy: 0.8748\n",
+      "Epoch 2/30\n",
+      "3067/3067 [==============================] - 1s 171us/step - loss: 0.0435 - accuracy: 0.9883\n",
+      "Epoch 3/30\n",
+      "3067/3067 [==============================] - 1s 170us/step - loss: 0.0108 - accuracy: 0.9980\n",
+      "Epoch 4/30\n",
+      "3067/3067 [==============================] - 1s 171us/step - loss: 0.0041 - accuracy: 0.9997\n",
+      "Epoch 5/30\n",
+      "3067/3067 [==============================] - 1s 187us/step - loss: 0.0020 - accuracy: 1.0000\n",
+      "Epoch 6/30\n",
+      "3067/3067 [==============================] - 1s 172us/step - loss: 0.0012 - accuracy: 1.0000\n",
+      "Epoch 7/30\n",
+      "3067/3067 [==============================] - 1s 183us/step - loss: 7.3399e-04 - accuracy: 1.0000\n",
+      "Epoch 8/30\n",
+      "3067/3067 [==============================] - 1s 182us/step - loss: 4.8517e-04 - accuracy: 1.0000\n",
+      "Epoch 9/30\n",
+      "3067/3067 [==============================] - 1s 170us/step - loss: 3.3997e-04 - accuracy: 1.0000\n",
+      "Epoch 10/30\n",
+      "3067/3067 [==============================] - 1s 176us/step - loss: 2.4600e-04 - accuracy: 1.0000\n",
+      "Epoch 11/30\n",
+      "3067/3067 [==============================] - 1s 190us/step - loss: 1.8352e-04 - accuracy: 1.0000\n",
+      "Epoch 12/30\n",
+      "3067/3067 [==============================] - 1s 182us/step - loss: 1.3796e-04 - accuracy: 1.0000\n",
+      "Epoch 13/30\n",
+      "3067/3067 [==============================] - 1s 175us/step - loss: 1.0632e-04 - accuracy: 1.0000\n",
+      "Epoch 14/30\n",
+      "3067/3067 [==============================] - 1s 184us/step - loss: 8.3265e-05 - accuracy: 1.0000\n",
+      "Epoch 15/30\n",
+      "3067/3067 [==============================] - 1s 187us/step - loss: 6.5627e-05 - accuracy: 1.0000\n",
+      "Epoch 16/30\n",
+      "3067/3067 [==============================] - 1s 174us/step - loss: 5.2295e-05 - accuracy: 1.0000\n",
+      "Epoch 17/30\n",
+      "3067/3067 [==============================] - 1s 175us/step - loss: 4.2169e-05 - accuracy: 1.0000\n",
+      "Epoch 18/30\n",
+      "3067/3067 [==============================] - 1s 177us/step - loss: 3.3821e-05 - accuracy: 1.0000\n",
+      "Epoch 19/30\n",
+      "3067/3067 [==============================] - 1s 177us/step - loss: 2.7433e-05 - accuracy: 1.0000\n",
+      "Epoch 20/30\n",
+      "3067/3067 [==============================] - 1s 173us/step - loss: 2.2265e-05 - accuracy: 1.0000\n",
+      "Epoch 21/30\n",
+      "3067/3067 [==============================] - 1s 176us/step - loss: 1.8369e-05 - accuracy: 1.0000\n",
+      "Epoch 22/30\n",
+      "3067/3067 [==============================] - 1s 194us/step - loss: 1.5066e-05 - accuracy: 1.0000\n",
+      "Epoch 23/30\n",
+      "3067/3067 [==============================] - 1s 174us/step - loss: 1.2314e-05 - accuracy: 1.0000\n",
+      "Epoch 24/30\n",
+      "3067/3067 [==============================] - 1s 175us/step - loss: 1.0179e-05 - accuracy: 1.0000\n",
+      "Epoch 25/30\n",
+      "3067/3067 [==============================] - 1s 178us/step - loss: 8.3880e-06 - accuracy: 1.0000\n",
+      "Epoch 26/30\n",
+      "3067/3067 [==============================] - 1s 179us/step - loss: 6.9760e-06 - accuracy: 1.0000\n",
+      "Epoch 27/30\n",
+      "3067/3067 [==============================] - 1s 178us/step - loss: 5.7684e-06 - accuracy: 1.0000\n",
+      "Epoch 28/30\n",
+      "3067/3067 [==============================] - 1s 180us/step - loss: 4.7843e-06 - accuracy: 1.0000\n",
+      "Epoch 29/30\n",
+      "3067/3067 [==============================] - 1s 180us/step - loss: 3.9889e-06 - accuracy: 1.0000\n",
+      "Epoch 30/30\n",
+      "3067/3067 [==============================] - 1s 179us/step - loss: 3.3243e-06 - accuracy: 1.0000\n",
+      "\n",
+      "Dev Accuracy:  0.6900\n"
+     ]
+    }
+   ],
+   "source": [
+    "model.fit(x_train1, y_train, epochs=30, verbose=True, batch_size=10)\n",
+    "loss1, accuracy35 = model.evaluate(x_dev1, y_dev, verbose=False)\n",
+    "print(\"\\nDev Accuracy:  {:.4f}\".format(accuracy35))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 291,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "predictions1 = model.predict(x_test1)\n",
+    "predictions1 = predictions1.round().astype(int)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "##### Feed Forward Network (Sequences)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 148,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "xseq_train = tokenizer.texts_to_sequences(x_train)\n",
+    "xseq_dev = tokenizer.texts_to_sequences(x_dev)\n",
+    "xseq_test = tokenizer.texts_to_sequences(x_test)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 149,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[   30  3719   894     5   881   547  1448   951   382 10921   131  1260\n",
+      "  4734   229  8437   881   372  3719   667    22  3719 10922   894  1922\n",
+      "   131  6363  1068   495  8438  3719]\n"
+     ]
+    }
+   ],
+   "source": [
+    "maxlen = 30\n",
+    "xseq_train = pad_sequences(xseq_train, padding='post', maxlen=maxlen)\n",
+    "xseq_dev = pad_sequences(xseq_dev, padding='post', maxlen=maxlen)\n",
+    "xseq_test = pad_sequences(xseq_test, padding='post', maxlen=maxlen)\n",
+    "print(xseq_train[0])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 288,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Model: \"feedforward-sequence-input\"\n",
+      "_________________________________________________________________\n",
+      "Layer (type)                 Output Shape              Param #   \n",
+      "=================================================================\n",
+      "embedding_4 (Embedding)      (None, 30, 40)            742920    \n",
+      "_________________________________________________________________\n",
+      "flatten_2 (Flatten)          (None, 1200)              0         \n",
+      "_________________________________________________________________\n",
+      "dense_19 (Dense)             (None, 10)                12010     \n",
+      "_________________________________________________________________\n",
+      "dense_20 (Dense)             (None, 10)                110       \n",
+      "_________________________________________________________________\n",
+      "dense_21 (Dense)             (None, 10)                110       \n",
+      "_________________________________________________________________\n",
+      "dense_22 (Dense)             (None, 1)                 11        \n",
+      "=================================================================\n",
+      "Total params: 755,161\n",
+      "Trainable params: 755,161\n",
+      "Non-trainable params: 0\n",
+      "_________________________________________________________________\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/opt/anaconda3/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.\n",
+      "  \"Converting sparse IndexedSlices to a dense Tensor of unknown shape. \"\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Epoch 1/30\n",
+      "3067/3067 [==============================] - 2s 537us/step - loss: 0.6241 - accuracy: 0.63911s - los\n",
+      "Epoch 2/30\n",
+      "3067/3067 [==============================] - 1s 415us/step - loss: 0.2689 - accuracy: 0.9798\n",
+      "Epoch 3/30\n",
+      "3067/3067 [==============================] - 1s 419us/step - loss: 0.0768 - accuracy: 0.9993\n",
+      "Epoch 4/30\n",
+      "3067/3067 [==============================] - 1s 421us/step - loss: 0.0373 - accuracy: 1.0000\n",
+      "Epoch 5/30\n",
+      "3067/3067 [==============================] - 1s 423us/step - loss: 0.0228 - accuracy: 1.0000\n",
+      "Epoch 6/30\n",
+      "3067/3067 [==============================] - 1s 441us/step - loss: 0.0155 - accuracy: 1.0000\n",
+      "Epoch 7/30\n",
+      "3067/3067 [==============================] - 1s 413us/step - loss: 0.0112 - accuracy: 1.0000\n",
+      "Epoch 8/30\n",
+      "3067/3067 [==============================] - 1s 414us/step - loss: 0.0084 - accuracy: 1.0000\n",
+      "Epoch 9/30\n",
+      "3067/3067 [==============================] - 1s 417us/step - loss: 0.0065 - accuracy: 1.0000\n",
+      "Epoch 10/30\n",
+      "3067/3067 [==============================] - 1s 412us/step - loss: 0.0052 - accuracy: 1.0000\n",
+      "Epoch 11/30\n",
+      "3067/3067 [==============================] - 1s 417us/step - loss: 0.0041 - accuracy: 1.0000\n",
+      "Epoch 12/30\n",
+      "3067/3067 [==============================] - 1s 415us/step - loss: 0.0034 - accuracy: 1.0000\n",
+      "Epoch 13/30\n",
+      "3067/3067 [==============================] - 1s 414us/step - loss: 0.0028 - accuracy: 1.0000\n",
+      "Epoch 14/30\n",
+      "3067/3067 [==============================] - 1s 418us/step - loss: 0.0023 - accuracy: 1.0000\n",
+      "Epoch 15/30\n",
+      "3067/3067 [==============================] - 1s 417us/step - loss: 0.0019 - accuracy: 1.0000\n",
+      "Epoch 16/30\n",
+      "3067/3067 [==============================] - 1s 418us/step - loss: 0.0016 - accuracy: 1.0000\n",
+      "Epoch 17/30\n",
+      "3067/3067 [==============================] - 1s 417us/step - loss: 0.0013 - accuracy: 1.0000\n",
+      "Epoch 18/30\n",
+      "3067/3067 [==============================] - 1s 438us/step - loss: 0.0011 - accuracy: 1.0000\n",
+      "Epoch 19/30\n",
+      "3067/3067 [==============================] - 1s 433us/step - loss: 9.5351e-04 - accuracy: 1.0000\n",
+      "Epoch 20/30\n",
+      "3067/3067 [==============================] - 1s 410us/step - loss: 8.0837e-04 - accuracy: 1.0000\n",
+      "Epoch 21/30\n",
+      "3067/3067 [==============================] - 1s 415us/step - loss: 6.8674e-04 - accuracy: 1.0000\n",
+      "Epoch 22/30\n",
+      "3067/3067 [==============================] - 1s 411us/step - loss: 5.8442e-04 - accuracy: 1.0000\n",
+      "Epoch 23/30\n",
+      "3067/3067 [==============================] - 1s 413us/step - loss: 4.9810e-04 - accuracy: 1.0000\n",
+      "Epoch 24/30\n",
+      "3067/3067 [==============================] - 1s 413us/step - loss: 4.2505e-04 - accuracy: 1.0000\n",
+      "Epoch 25/30\n",
+      "3067/3067 [==============================] - 1s 416us/step - loss: 3.6307e-04 - accuracy: 1.0000\n",
+      "Epoch 26/30\n",
+      "3067/3067 [==============================] - 1s 444us/step - loss: 3.1039e-04 - accuracy: 1.0000\n",
+      "Epoch 27/30\n",
+      "3067/3067 [==============================] - 1s 455us/step - loss: 2.6557e-04 - accuracy: 1.0000\n",
+      "Epoch 28/30\n",
+      "3067/3067 [==============================] - 1s 409us/step - loss: 2.2737e-04 - accuracy: 1.0000\n",
+      "Epoch 29/30\n",
+      "3067/3067 [==============================] - 1s 407us/step - loss: 1.9477e-04 - accuracy: 1.0000\n",
+      "Epoch 30/30\n",
+      "3067/3067 [==============================] - 1s 409us/step - loss: 1.6691e-04 - accuracy: 1.0000\n",
+      "Dev Accuracy:  0.5800\n"
+     ]
+    }
+   ],
+   "source": [
+    "embedding_dim = 10\n",
+    "model2 = Sequential(name=\"feedforward-sequence-input\")\n",
+    "model2.add(layers.Embedding(input_dim=vocab_size, \n",
+    "                           output_dim=embedding_dim, \n",
+    "                           input_length=maxlen))\n",
+    "model2.add(layers.Flatten())\n",
+    "model2.add(layers.Dense(10, activation='sigmoid'))\n",
+    "model2.add(layers.Dense(10, activation='relu'))\n",
+    "model2.add(layers.Dense(10, activation='relu'))\n",
+    "model2.add(layers.Dense(1, activation='sigmoid'))\n",
+    "model2.compile(optimizer='adam',\n",
+    "              loss='binary_crossentropy',\n",
+    "              metrics=['accuracy'])\n",
+    "model2.summary()\n",
+    "model2.fit(xseq_train, y_train, epochs=30, verbose=True,batch_size=10)\n",
+    "loss2, accuracy36 = model2.evaluate(xseq_dev, y_dev, verbose=False)\n",
+    "print(\"Dev Accuracy:  {:.4f}\".format(accuracy36))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 177,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "predictions2 = model2.predict(xseq_test)\n",
+    "predictions2 = predictions2.round().astype(int)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "##### LSTM"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 309,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Model: \"lstm\"\n",
+      "_________________________________________________________________\n",
+      "Layer (type)                 Output Shape              Param #   \n",
+      "=================================================================\n",
+      "embedding_6 (Embedding)      (None, 30, 40)            742920    \n",
+      "_________________________________________________________________\n",
+      "lstm_4 (LSTM)                (None, 10)                2040      \n",
+      "_________________________________________________________________\n",
+      "dense_50 (Dense)             (None, 1)                 11        \n",
+      "_________________________________________________________________\n",
+      "dense_51 (Dense)             (None, 1)                 2         \n",
+      "_________________________________________________________________\n",
+      "dense_52 (Dense)             (None, 1)                 2         \n",
+      "_________________________________________________________________\n",
+      "dense_53 (Dense)             (None, 1)                 2         \n",
+      "=================================================================\n",
+      "Total params: 744,977\n",
+      "Trainable params: 744,977\n",
+      "Non-trainable params: 0\n",
+      "_________________________________________________________________\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/opt/anaconda3/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.\n",
+      "  \"Converting sparse IndexedSlices to a dense Tensor of unknown shape. \"\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Epoch 1/20\n",
+      "3067/3067 [==============================] - 4s 1ms/step - loss: 0.6848 - accuracy: 0.6192\n",
+      "Epoch 2/20\n",
+      "3067/3067 [==============================] - 4s 1ms/step - loss: 0.6738 - accuracy: 0.6192\n",
+      "Epoch 3/20\n",
+      "3067/3067 [==============================] - 3s 1ms/step - loss: 0.6686 - accuracy: 0.6192\n",
+      "Epoch 4/20\n",
+      "3067/3067 [==============================] - 3s 1ms/step - loss: 0.6662 - accuracy: 0.6192\n",
+      "Epoch 5/20\n",
+      "3067/3067 [==============================] - 3s 1ms/step - loss: 0.6652 - accuracy: 0.6192\n",
+      "Epoch 6/20\n",
+      "3067/3067 [==============================] - 3s 1ms/step - loss: 0.6648 - accuracy: 0.6192\n",
+      "Epoch 7/20\n",
+      "3067/3067 [==============================] - 3s 1ms/step - loss: 0.6646 - accuracy: 0.6192\n",
+      "Epoch 8/20\n",
+      "3067/3067 [==============================] - 4s 1ms/step - loss: 0.6645 - accuracy: 0.6192\n",
+      "Epoch 9/20\n",
+      "3067/3067 [==============================] - 4s 1ms/step - loss: 0.6645 - accuracy: 0.6192\n",
+      "Epoch 10/20\n",
+      "3067/3067 [==============================] - 4s 1ms/step - loss: 0.6645 - accuracy: 0.6192\n",
+      "Epoch 11/20\n",
+      "3067/3067 [==============================] - 4s 1ms/step - loss: 0.6645 - accuracy: 0.6192\n",
+      "Epoch 12/20\n",
+      "3067/3067 [==============================] - 4s 1ms/step - loss: 0.6645 - accuracy: 0.6192\n",
+      "Epoch 13/20\n",
+      "3067/3067 [==============================] - 4s 1ms/step - loss: 0.6646 - accuracy: 0.6192\n",
+      "Epoch 14/20\n",
+      "3067/3067 [==============================] - 4s 1ms/step - loss: 0.6645 - accuracy: 0.6192\n",
+      "Epoch 15/20\n",
+      "3067/3067 [==============================] - 4s 1ms/step - loss: 0.6645 - accuracy: 0.6192\n",
+      "Epoch 16/20\n",
+      "3067/3067 [==============================] - 4s 1ms/step - loss: 0.6646 - accuracy: 0.6192\n",
+      "Epoch 17/20\n",
+      "3067/3067 [==============================] - 4s 1ms/step - loss: 0.6645 - accuracy: 0.6192\n",
+      "Epoch 18/20\n",
+      "3067/3067 [==============================] - 4s 1ms/step - loss: 0.6645 - accuracy: 0.6192\n",
+      "Epoch 19/20\n",
+      "3067/3067 [==============================] - 4s 1ms/step - loss: 0.6645 - accuracy: 0.6192\n",
+      "Epoch 20/20\n",
+      "3067/3067 [==============================] - 4s 1ms/step - loss: 0.6645 - accuracy: 0.6192\n",
+      "Dev Accuracy:  0.5000\n"
+     ]
+    }
+   ],
+   "source": [
+    "from keras.layers import LSTM\n",
+    "model3 = Sequential(name=\"lstm\")\n",
+    "model3.add(layers.Embedding(input_dim=vocab_size, \n",
+    "                           output_dim=embedding_dim, \n",
+    "                           input_length=maxlen))\n",
+    "model3.add(LSTM(10))\n",
+    "model3.add(layers.Dense(1, activation='sigmoid'))\n",
+    "model3.add(layers.Dense(1, activation='relu'))\n",
+    "model3.add(layers.Dense(1, activation='relu'))\n",
+    "model3.add(layers.Dense(1, activation='sigmoid'))\n",
+    "model3.compile(optimizer='adam',\n",
+    "              loss='binary_crossentropy',\n",
+    "              metrics=['accuracy'])\n",
+    "model3.summary()\n",
+    "\n",
+    "model3.fit(xseq_train, y_train, epochs=20, verbose=True,batch_size=10)\n",
+    "loss3, accuracy37 = model3.evaluate(xseq_dev, y_dev, verbose=False)\n",
+    "print(\"Dev Accuracy:  {:.4f}\".format(accuracy37))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 181,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "predictions3 = model3.predict(xseq_test)\n",
+    "predictions3 = predictions3.round().astype(int)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### METRICS FOR DEEP LEARNING METHODS"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 176,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "------------METRICS FOR FEED FORWARD NEURAL NETWORK USING BAG OF WORDS-----------\n",
+      "\n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.87      0.40      0.55        50\n",
+      "           1       0.61      0.94      0.74        50\n",
+      "\n",
+      "    accuracy                           0.67       100\n",
+      "   macro avg       0.74      0.67      0.64       100\n",
+      "weighted avg       0.74      0.67      0.64       100\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "#Metrics for Development Set (Feed Forward Neural Network - Bag of words)\n",
+    "met4 = model.predict(x_dev1)\n",
+    "met4 = met4.round().astype(int)\n",
+    "print(\"------------METRICS FOR FEED FORWARD NEURAL NETWORK USING BAG OF WORDS-----------\\n\")\n",
+    "print(classification_report(y_dev,met4))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 234,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "True\tPredicted\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "Out of 100, total values predicted incorrectly by Feed Forward Network (Bag of Words) are 33\n"
+     ]
+    }
+   ],
+   "source": [
+    "count=0\n",
+    "print(\"True\\tPredicted\")\n",
+    "for i in range(len(y_dev)):\n",
+    "    if(y_dev[i] == met4[i]):\n",
+    "        continue\n",
+    "    else:\n",
+    "        count+=1\n",
+    "        print(\"  \"+str(y_dev[i])+\"\\t   \"+str(*met4[i]))\n",
+    "print(\"Out of {}, total values predicted incorrectly by Feed Forward Network (Bag of Words) are {}\".format(len(y_dev),count))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 178,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "------------METRICS FOR FEED FORWARD NEURAL NETWORK USING SEQUENCES-----------\n",
+      "\n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.67      0.24      0.35        50\n",
+      "           1       0.54      0.88      0.67        50\n",
+      "\n",
+      "    accuracy                           0.56       100\n",
+      "   macro avg       0.60      0.56      0.51       100\n",
+      "weighted avg       0.60      0.56      0.51       100\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "#Metrics for Development Set (Feed Forward Neural Network - Sequences)\n",
+    "met5 = model2.predict(xseq_dev)\n",
+    "met5 = met5.round().astype(int)\n",
+    "print(\"------------METRICS FOR FEED FORWARD NEURAL NETWORK USING SEQUENCES-----------\\n\")\n",
+    "print(classification_report(y_dev,met5))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 235,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "True\tPredicted\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "Out of 100, total values predicted incorrectly by Feed Forward Network (sequences) are 44\n"
+     ]
+    }
+   ],
+   "source": [
+    "count=0\n",
+    "print(\"True\\tPredicted\")\n",
+    "for i in range(len(y_dev)):\n",
+    "    if(y_dev[i] == met5[i]):\n",
+    "        continue\n",
+    "    else:\n",
+    "        count+=1\n",
+    "        print(\"  \"+str(y_dev[i])+\"\\t   \"+str(*met5[i]))\n",
+    "print(\"Out of {}, total values predicted incorrectly by Feed Forward Network (sequences) are {}\".format(len(y_dev),count))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 182,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "------------METRICS FOR LSTM-----------\n",
+      "\n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.65      0.30      0.41        50\n",
+      "           1       0.55      0.84      0.66        50\n",
+      "\n",
+      "    accuracy                           0.57       100\n",
+      "   macro avg       0.60      0.57      0.54       100\n",
+      "weighted avg       0.60      0.57      0.54       100\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "#Metrics for Development Set (LSTM)\n",
+    "met6 = model3.predict(xseq_dev)\n",
+    "met6 = met6.round().astype(int)\n",
+    "print(\"------------METRICS FOR LSTM-----------\\n\")\n",
+    "print(classification_report(y_dev,met6))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 236,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "True\tPredicted\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "  1\t   0\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  0\t   1\n",
+      "  1\t   0\n",
+      "Out of 100, total values predicted incorrectly by LSTM are 43\n"
+     ]
+    }
+   ],
+   "source": [
+    "count = 0\n",
+    "print(\"True\\tPredicted\")\n",
+    "for i in range(len(y_dev)):\n",
+    "    if(y_dev[i] == met6[i]):\n",
+    "        continue\n",
+    "    else:\n",
+    "        count+=1\n",
+    "        print(\"  \"+str(y_dev[i])+\"\\t   \"+str(*met6[i]))\n",
+    "print(\"Out of {}, total values predicted incorrectly by LSTM are {}\".format(len(y_dev),count))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### CONVERTING THE OUTPUT TO DESIRED FORMAT"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 304,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "dfpredictions = pd.DataFrame(data=predictions1,index=None)\n",
+    "dfpredictions.rename(columns={0:'Predictions'}, inplace=True)\n",
+    "merged = pd.concat([testdatadf[\"ID\"],dfpredictions[\"Predictions\"]],axis=1)\n",
+    "merged[\"Label\"] = \"label\"\n",
+    "merged = merged[[\"ID\",\"Label\",\"Predictions\"]]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 305,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "1    908\n",
+       "0    502\n",
+       "Name: Predictions, dtype: int64"
+      ]
+     },
+     "execution_count": 305,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "merged[\"Predictions\"].value_counts()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 283,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def recur_dictify(frame):\n",
+    "    if len(frame.columns) == 1:\n",
+    "        if frame.values.size == 1: return frame.values[0][0]\n",
+    "        return frame.values.squeeze()\n",
+    "    grouped = frame.groupby(frame.columns[0])\n",
+    "    d = {k: recur_dictify(g.iloc[:,1:]) for k,g in grouped}\n",
+    "    return d\n",
+    "final_dict = recur_dictify(merged)\n",
+    "final1 = dict(sorted(final_dict.items(), key=lambda v: int(v[0].split(\"-\")[1])))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 284,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "mylist = eval(str(final1))\n",
+    "mylist1 = json.dumps(mylist)\n",
+    "mylist2 = json.loads(mylist1)\n",
+    "with open('test-output.json', 'w') as json_file:\n",
+    "    json.dump(mylist2, json_file)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.4"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
