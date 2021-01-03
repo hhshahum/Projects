@@ -1,0 +1,714 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Import all the libraries\n",
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "import os\n",
+    "import csv\n",
+    "import collections\n",
+    "import re\n",
+    "import nltk\n",
+    "from nltk.corpus import stopwords\n",
+    "from textblob import TextBlob, Word, Blobber\n",
+    "from sklearn.tree import DecisionTreeClassifier\n",
+    "from sklearn.ensemble import RandomForestRegressor\n",
+    "from sklearn.datasets import make_regression\n",
+    "from sklearn.neural_network import MLPClassifier\n",
+    "from sklearn.naive_bayes import MultinomialNB\n",
+    "from sklearn.linear_model import LogisticRegression\n",
+    "from sklearn import preprocessing\n",
+    "from sklearn.svm import SVC\n",
+    "from sklearn.ensemble import BaggingClassifier\n",
+    "from sklearn.naive_bayes import GaussianNB"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Import the training txt file\n",
+    "df = pd.DataFrame()\n",
+    "df = pd.read_fwf('train_tweets.txt',header=None)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Renaming the columns to Tweets and ID in Training File\n",
+    "df.rename(columns = {0:'ID',1:'Tweets'}, inplace = True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Import the testing txt file\n",
+    "df1 = pd.DataFrame()\n",
+    "df1 = pd.read_fwf('test_tweets_unlabeled.txt',header=None)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Renaming the columns to Tweets in Testing file\n",
+    "df1.rename(columns = {0:'Tweets'}, inplace = True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Create extra Dataframes for further processing\n",
+    "df3 = pd.DataFrame()\n",
+    "df4 = pd.DataFrame()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Remobe @handles as well\n",
+    "#df[\"Tweets\"].str.replace(\"@handle\",\" \")\n",
+    "#df1[\"Tweets\"].str.replace(\"@handle\",\" \")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#FEATURE 1\n",
+    "\n",
+    "#Calculating the number of words in a tweet in Training file\n",
+    "df['totalwords'] = df['Tweets'].str.split(\" \").str.len()\n",
+    "\n",
+    "#Calculating the number of words in a tweet in Testing File\n",
+    "df1['totalwords'] = df1['Tweets'].str.split(\" \").str.len()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#FEATURE 2\n",
+    "\n",
+    "#Checking if a string contains URL or not in Training File\n",
+    "df[\"contains_url\"] = df[\"Tweets\"].str.contains(\"http\")\n",
+    "\n",
+    "#Checking if a string contains URL or not in Testing File\n",
+    "df1[\"contains_url\"] = df1[\"Tweets\"].str.contains(\"http\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#FEATURE 3\n",
+    "\n",
+    "#Counting the number of Hashtags per tweet in Training File\n",
+    "search=\"#\"\n",
+    "df[\"count_of_hashtags\"]= df[\"Tweets\"].str.count(search, re.I)\n",
+    "\n",
+    "#Counting the number of Hashtags per tweet in Testing File\n",
+    "search=\"#\"\n",
+    "df1[\"count_of_hashtags\"]= df1[\"Tweets\"].str.count(search, re.I)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#FEATURE 4\n",
+    "\n",
+    "#Checking whether the tweets contains only digits in Training File\n",
+    "df['isdigit'] = df['Tweets'].str.isdigit()\n",
+    "\n",
+    "#Checking whether the tweets contains only digits in Testing File\n",
+    "df1['isdigit'] = df1['Tweets'].str.isdigit()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#FEATURE 5\n",
+    "\n",
+    "#Checking Whether first letter of each word is Capital (TITLE CASING PYTHON) in Training file\n",
+    "df['istitle'] = df['Tweets'].str.istitle()\n",
+    "\n",
+    "#Checking Whether first letter of each word is Capital (TITLE CASING PYTHON) in Testing file\n",
+    "df1['istitle'] = df1['Tweets'].str.istitle()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#FEATURE 6\n",
+    "\n",
+    "#Checking if all letters in the tweet are upper case in Training File\n",
+    "df['isupper'] = df['Tweets'].str.isupper()\n",
+    "\n",
+    "#Checking if all letters in the tweet are upper case in Testing File\n",
+    "df1['isupper'] = df1['Tweets'].str.isupper()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#FEATURE 7\n",
+    "\n",
+    "#Average word length in training file\n",
+    "i=0\n",
+    "for tweet in df['Tweets']:\n",
+    "    row_index = df.index[i]\n",
+    "    tweet  = str(tweet)\n",
+    "    word_length = 0\n",
+    "    for word in tweet.split(\" \"):\n",
+    "        word_length += len(word)\n",
+    "    word_count = len(tweet.split(\" \"))\n",
+    "    avg_word_lent = word_length/ word_count\n",
+    "    df.loc[row_index,'avg_len'] = avg_word_lent\n",
+    "    i+=1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#FEATURE 7\n",
+    "\n",
+    "#Average word length in testing file\n",
+    "i=0\n",
+    "for tweet in df1['Tweets']:\n",
+    "    row_index = df.index[i]\n",
+    "    tweet  = str(tweet)\n",
+    "    word_length = 0\n",
+    "    for word in tweet.split(\" \"):\n",
+    "        word_length += len(word)\n",
+    "    word_count = len(tweet.split(\" \"))\n",
+    "    avg_word_lent = word_length/ word_count\n",
+    "    df1.loc[row_index,'avg_len'] = avg_word_lent\n",
+    "    i+=1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#FEATURE 8\n",
+    "\n",
+    "#Sentiment Analysis of tweet in training file, in terms of values\n",
+    "df['sentiment'] = df['Tweets'].apply(lambda x: TextBlob(str(x)).sentiment[0])\n",
+    "\n",
+    "#Sentiment Analysis of tweet in testing file, in terms of values\n",
+    "df1['sentiment'] = df1['Tweets'].apply(lambda x: TextBlob(str(x)).sentiment[0])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#FEATURE 9\n",
+    "\n",
+    "#Calculating the number of characters in a tweet in Training file\n",
+    "df['charwords'] = df['Tweets'].str.len()\n",
+    "\n",
+    "#Calculating the number of characterss in a tweet in Testing File\n",
+    "df1['charwords'] = df1['Tweets'].str.len()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Collecting all the stopwords of english language\n",
+    "stop_words = set(stopwords.words('english'))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#FEATURE 10\n",
+    "\n",
+    "#Counting number of stop words in the tweet in training file\n",
+    "df['no_of_stop_words'] = df['Tweets'].apply(lambda x: len(set(str(x).split()) & stop_words))\n",
+    "\n",
+    "#Counting number of stop words in the tweet in testing file\n",
+    "df1['no_of_stop_words'] = df1['Tweets'].apply(lambda x: len(set(str(x).split()) & stop_words))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Extra Features in training file which we implemented but we had to restrict ourselves becuase of the time constraints\n",
+    "#It includes couting the url, exaggerated words, exaggerated punctuations, emoji's, retweets, handles mentioned,etc.\n",
+    "\"\"\"\n",
+    "i=0\n",
+    "#LISTS FOR CHARACTER SETS\n",
+    "emojis = [':-)',':-/','>=/',':-P',':)',';)',';D',';(',';-)',';-D',';-(',':(',':-(',':D',':\\'(',\":\\'D\",\":\\')\",\n",
+    "          ':-D',':-o',':-O',':O',':o',':0',':-Q','>:(','>:[','>:]','>:o','>:U','D:','D;','D-;',':|',':-|','=)',\n",
+    "         ')=','=(','(=','<3','</3','\")','\"(','\"/','^_^']\n",
+    "punctuation = ['!','.','?']\n",
+    "compound_punctuation = ['!?','?!']\n",
+    "url_protocols = ['http://','https://','www.',\".com\",'.net','.edu','.org']\n",
+    "alphabets = 'abcdefghijklmnopqrstuvwxyz'\n",
+    "\n",
+    "#ITERATE THROUGH TWEETS\n",
+    "print(\"START\")\n",
+    "for tweet in df['Tweets']:\n",
+    "    row_index = df.index[i]\n",
+    "    tweet  = str(tweet)\n",
+    "    is_ascii = True\n",
+    "    try:\n",
+    "        tweet.encode('ascii')\n",
+    "    except UnicodeEncodeError:\n",
+    "        is_ascii = False\n",
+    "    else:\n",
+    "        is_ascii = True\n",
+    "    \n",
+    "    word_length = 0\n",
+    "    emoji_status = False\n",
+    "    emoji_count = 0\n",
+    "    has_url = False\n",
+    "    urls = 0\n",
+    "    rt = False\n",
+    "    if \"RT @\" in tweet:\n",
+    "        rt = True\n",
+    "        \n",
+    "    if any(alphabet*3 in tweet.lower() for alphabet in alphabets):\n",
+    "        exaggerated_alpha = True\n",
+    "    \n",
+    "    \n",
+    "    #TWEET BECOMES A LIST\n",
+    "    tweet = tweet.split()\n",
+    "    num_upper = 0\n",
+    "    exaggerated = False\n",
+    "    exaggerated_alpha = False\n",
+    "    is_directed = False\n",
+    "    handle_mentioned = 0\n",
+    "    if tweet.count('@handle')>1:\n",
+    "        is_directed = True\n",
+    "        handle_mentioned = tweet.count('@handle')\n",
+    "    \n",
+    "    #GENERATE LIST OF BIGRAMS   \n",
+    "    sorted_tweet = sorted(tweet)\n",
+    "    sequences = [sorted_tweet[x:] for x in range(len(sorted_tweet))]\n",
+    "    tweet_bigrams = []\n",
+    "    for (sequence1, sequence2) in zip(sequences[:-1], sequences[1:]):\n",
+    "        for word1 in sequence1:\n",
+    "            for word2 in sequence2:\n",
+    "                if word1 != word2:\n",
+    "                    bigram = (word1, word2)\n",
+    "                    tweet_bigrams.append(bigram)\n",
+    "                    if bigram not in bigrams:\n",
+    "                        bigrams.append((word1, word2))\n",
+    "    \n",
+    "    #ITERATE THROUGH THE WORDS IN A TWEET\n",
+    "    for word in tweet:\n",
+    "        word_length += len(word)\n",
+    "        if word.isupper():\n",
+    "            num_upper += 1\n",
+    "        if any (emoji in word for emoji in emojis):\n",
+    "            emoji_status = True\n",
+    "            emoji_count +=1\n",
+    "        if any (protocol in word for protocol in url_protocols):\n",
+    "            has_url = True\n",
+    "            urls += 1\n",
+    "        if not exaggerated:\n",
+    "          if any (symbol*3 in word for symbol in punctuation):\n",
+    "              exaggerated = True\n",
+    "          if not exaggerated:\n",
+    "              if any (symbol in word for symbol in compound_punctuation):\n",
+    "                  exaggerated = True\n",
+    "    #ALL WORDS IN ONE TWEET PROCESSED\n",
+    "    word_count = len(tweet)\n",
+    "    avg_word_lent = word_length/ word_count\n",
+    "    df.loc[row_index,'avg_len'] = avg_word_lent\n",
+    "    df.loc[row_index,'emoji_status'] = emoji_status\n",
+    "    df.loc[row_index,'emoji_count'] = emoji_count\n",
+    "    df.loc[row_index,'is_ascii'] = is_ascii\n",
+    "    df.loc[row_index,'num_upper'] = num_upper\n",
+    "    df.loc[row_index,'is_rt'] = rt\n",
+    "    df.loc[row_index,'has_url'] = has_url\n",
+    "    df.loc[row_index,'urls'] = urls\n",
+    "    df.loc[row_index,'exaggerated_alphabets'] = exaggerated_alpha\n",
+    "    df.loc[row_index,'exaggerated'] = exaggerated\n",
+    "    df.loc[row_index,'is_directed'] = is_directed\n",
+    "    df.loc[row_index,'handles_mentioned'] = handle_mentioned\n",
+    "    i+=1\n",
+    "\"\"\""
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Extra Features in testing file which we implemented but we had to restrict ourselves becuase of the time constraints\n",
+    "#It includes couting the url, exaggerated words, exaggerated punctuations, emoji's, handles mentioned, retweets,etc.\n",
+    "\"\"\"\n",
+    "i=0\n",
+    "#LISTS FOR CHARACTER SETS\n",
+    "emojis = [':-)',':-/','>=/',':-P',':)',';)',';D',';(',';-)',';-D',';-(',':(',':-(',':D',':\\'(',\":\\'D\",\":\\')\",\n",
+    "          ':-D',':-o',':-O',':O',':o',':0',':-Q','>:(','>:[','>:]','>:o','>:U','D:','D;','D-;',':|',':-|','=)',\n",
+    "         ')=','=(','(=','<3','</3','\")','\"(','\"/','^_^']\n",
+    "punctuation = ['!','.','?']\n",
+    "compound_punctuation = ['!?','?!']\n",
+    "url_protocols = ['http://','https://','www.',\".com\",'.net','.edu','.org']\n",
+    "alphabets = 'abcdefghijklmnopqrstuvwxyz'\n",
+    "\n",
+    "#ITERATE THROUGH TWEETS\n",
+    "print(\"START\")\n",
+    "for tweet in df1['Tweets']:\n",
+    "    row_index = df1.index[i]\n",
+    "    tweet  = str(tweet)\n",
+    "    is_ascii = True\n",
+    "    try:\n",
+    "        tweet.encode('ascii')\n",
+    "    except UnicodeEncodeError:\n",
+    "        is_ascii = False\n",
+    "    else:\n",
+    "        is_ascii = True\n",
+    "    \n",
+    "    word_length = 0\n",
+    "    emoji_status = False\n",
+    "    emoji_count = 0\n",
+    "    has_url = False\n",
+    "    urls = 0\n",
+    "    rt = False\n",
+    "    if \"RT @\" in tweet:\n",
+    "        rt = True\n",
+    "        \n",
+    "    if any(alphabet*3 in tweet.lower() for alphabet in alphabets):\n",
+    "        exaggerated_alpha = True\n",
+    "    \n",
+    "    \n",
+    "    #TWEET BECOMES A LIST\n",
+    "    tweet = tweet.split()\n",
+    "    num_upper = 0\n",
+    "    exaggerated = False\n",
+    "    exaggerated_alpha = False\n",
+    "    is_directed = False\n",
+    "    handle_mentioned = 0\n",
+    "    if tweet.count('@handle')>1:\n",
+    "        is_directed = True\n",
+    "        handle_mentioned = tweet.count('@handle')\n",
+    "        \n",
+    "    #GENERATE LIST OF BIGRAMS   \n",
+    "    sorted_tweet = sorted(tweet)\n",
+    "    sequences = [sorted_tweet[x:] for x in range(len(sorted_tweet))]\n",
+    "    tweet_bigrams = []\n",
+    "    for (sequence1, sequence2) in zip(sequences[:-1], sequences[1:]):\n",
+    "        for word1 in sequence1:\n",
+    "            for word2 in sequence2:\n",
+    "                if word1 != word2:\n",
+    "                    bigram = (word1, word2)\n",
+    "                    tweet_bigrams.append(bigram)\n",
+    "                    if bigram not in bigrams:\n",
+    "                        bigrams.append((word1, word2))\n",
+    "    \n",
+    "    #ITERATE THROUGH THE WORDS IN A TWEET\n",
+    "    for word in tweet:\n",
+    "        word_length += len(word)\n",
+    "        if word.isupper():\n",
+    "            num_upper += 1\n",
+    "        if any (emoji in word for emoji in emojis):\n",
+    "            emoji_status = True\n",
+    "            emoji_count +=1\n",
+    "        if any (protocol in word for protocol in url_protocols):\n",
+    "            has_url = True\n",
+    "            urls += 1\n",
+    "        if not exaggerated:\n",
+    "          if any (symbol*3 in word for symbol in punctuation):\n",
+    "              exaggerated = True\n",
+    "          if not exaggerated:\n",
+    "              if any (symbol in word for symbol in compound_punctuation):\n",
+    "                  exaggerated = True\n",
+    "    #ALL WORDS IN ONE TWEET PROCESSED\n",
+    "    word_count = len(tweet)\n",
+    "    avg_word_lent = word_length/ word_count\n",
+    "    df1.loc[row_index,'avg_len'] = avg_word_lent\n",
+    "    df1.loc[row_index,'emoji_status'] = emoji_status\n",
+    "    df1.loc[row_index,'emoji_count'] = emoji_count\n",
+    "    df1.loc[row_index,'is_ascii'] = is_ascii\n",
+    "    df1.loc[row_index,'num_upper'] = num_upper\n",
+    "    df1.loc[row_index,'is_rt'] = rt\n",
+    "    df1.loc[row_index,'has_url'] = has_url\n",
+    "    df1.loc[row_index,'urls'] = urls\n",
+    "    df1.loc[row_index,'exaggerated_alphabets'] = exaggerated_alpha\n",
+    "    df1.loc[row_index,'exaggerated'] = exaggerated\n",
+    "    df1.loc[row_index,'is_directed'] = is_directed\n",
+    "    df1.loc[row_index,'handles_mentioned'] = handle_mentioned\n",
+    "    i+=1\n",
+    "\"\"\""
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Drop the NA Rows \n",
+    "df = df.dropna(how='any') "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Drop the columns which are not our features in Training File\n",
+    "features = df.drop(['Tweets','ID'],axis=1)\n",
+    "\n",
+    "#Drop the columns which are not our features in Testing File\n",
+    "features1 = df1.drop('Tweets',axis=1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Set the target Variable\n",
+    "target = df['ID']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Assign\n",
+    "train_features = features\n",
+    "\n",
+    "train_labels = target\n",
+    "\n",
+    "test_features = features1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#SVM LINEAR KERNEL\n",
+    "#svmcl = SVC(kernel='linear')\n",
+    "#svmcl = svmcl.fit(train_features, train_labels)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#SVM RBF KERNEL\n",
+    "#svmcl = SVC(kernel='rbf')\n",
+    "#svmcl = svmcl.fit(train_features, train_labels)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Logistic Regression\n",
+    "#lg = LogisticRegression()\n",
+    "#lg = lg.fit(train_features, train_labels)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#SVM Using Bagging Classifier\n",
+    "#clf = BaggingClassifier(SVC(kernel='linear'),max_samples=0.30,max_features=0.30)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Using MLP Classifier\n",
+    "#clf = MLPClassifer()\n",
+    "#clf.fit(train_features,train_labels)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Random Forest Approach\n",
+    "#regr = RandomForestRegressor(max_depth=2, random_state=0,n_estimators=100)\n",
+    "#regr.fit(train_features,train_labels)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Decion Tree Approach\n",
+    "dct = DecisionTreeClassifier()\n",
+    "dct.fit(train_features,train_labels)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Gaussian Naive Bayesian\n",
+    "le = preprocessing.LabelEncoder()\n",
+    "df2 = df.drop(['Tweets','ID'],axis=1)\n",
+    "df3 = df1.drop('Tweets',axis=1)\n",
+    "df2 = df2.apply(preprocessing.LabelEncoder().fit_transform)\n",
+    "df3 = df3.apply(preprocessing.LabelEncoder().fit_transform)\n",
+    "df = df.dropna(inplace=True)\n",
+    "df2 = df2.dropna(inplace=True) \n",
+    "df3 = df3.dropna(inplace=True)\n",
+    "features = df2\n",
+    "features1 = df3\n",
+    "train_features = features\n",
+    "train_labels = target\n",
+    "test_features = features1\n",
+    "model = GaussianNB()\n",
+    "model.fit(train_features, train_labels)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Predict the values for Gaussian NB\n",
+    "y_predict_gaussiannb= model.predict(test_features)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Predict the vales for Decision Tree Classifier\n",
+    "y_predict_dct = dct.predict(test_features)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Adding the predicted values to a dataframe and then to a csv for Decision Tree Appraoch\n",
+    "df5 = pd.DataFrame(y_predict_dct)\n",
+    "df5.to_csv(\"dct_pred.csv\",index=False)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Adding the predicted values to a dataframe and then to a csv for Decision Tree Appraoch\n",
+    "df6 = pd.DataFrame(y_predict_gaussiannb)\n",
+    "df6.to_csv(\"gaussiannb_pred.csv\",index=False)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.1"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
